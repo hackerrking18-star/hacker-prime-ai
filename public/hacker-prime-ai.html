@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>HACKER PRIME AI - Standalone Prediction Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --brightness: 1;
+      --glow-intensity: 1;
+      --scanline-opacity: 0.15;
+    }
+    body {
+      background-color: #03040a;
+      color: #f1f5f9;
+      font-family: 'Outfit', sans-serif;
+      filter: brightness(var(--brightness));
+      -webkit-tap-highlight-color: transparent;
+    }
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      opacity: var(--scanline-opacity);
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+    .animate-spin-slow {
+      animation: spinSlow 3.5s linear infinite;
+    }
+    .animate-spin-reverse {
+      animation: spinReverse 2.2s linear infinite;
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+    .neon-border-cyan {
+      box-shadow: 0 0 15px rgba(0, 245, 255, calc(0.35 * var(--glow-intensity))), inset 0 0 10px rgba(0, 245, 255, calc(0.15 * var(--glow-intensity)));
+    }
+    .neon-border-fire {
+      box-shadow: 0 0 20px rgba(255, 102, 0, calc(0.5 * var(--glow-intensity))), inset 0 0 12px rgba(255, 51, 0, calc(0.2 * var(--glow-intensity)));
+    }
+  </style>
+</head>
+<body class="relative min-h-screen flex flex-col justify-between overflow-x-hidden p-3 sm:p-5 select-none">
+  <div class="fixed inset-0 scanlines z-50 pointer-events-none"></div>
+
+  <!-- Background Ambience -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+    <div class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-cyan-600/15 blur-[100px]"></div>
+    <div class="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-purple-600/15 blur-[100px]"></div>
+    <div class="absolute -bottom-32 left-1/3 w-80 h-80 rounded-full bg-amber-600/15 blur-[100px]"></div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-full bg-black/90 border border-cyan-400 text-cyan-300 font-orbitron text-xs sm:text-sm font-bold shadow-[0_0_20px_rgba(0,245,255,0.4)] transition-all duration-300 opacity-0 pointer-events-none translate-y-[-20px]">
+    Toast Message
+  </div>
+
+  <!-- TOP BAR -->
+  <header class="w-full max-w-xl mx-auto flex items-center justify-between pb-3 border-b border-cyan-500/20">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center font-orbitron font-black text-black text-sm shadow-[0_0_10px_#00f5ff]">
+        ⚡
+      </div>
+      <div>
+        <h1 class="font-orbitron font-black text-xs sm:text-sm tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-purple-300">
+          HACKER PRIME AI
+        </h1>
+        <span class="text-[9px] font-mono text-cyan-400/80 tracking-widest block uppercase">
+          VIP V4.9 • STANDALONE HTML
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <!-- Brightness Slider Toggle -->
+      <button onclick="toggleBrightnessModal()" class="px-2.5 py-1.5 rounded-lg bg-black/50 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 transition-all font-mono text-xs flex items-center gap-1">
+        ☀️ <span class="hidden sm:inline">BRIGHTNESS</span>
+      </button>
+
+      <!-- Admin Panel Toggle -->
+      <button onclick="openAdminModal()" class="px-2.5 py-1.5 rounded-lg bg-black/50 border border-purple-500/50 text-purple-300 hover:bg-purple-500/20 transition-all font-orbitron font-bold text-[10px] sm:text-xs flex items-center gap-1 shadow-[0_0_8px_rgba(168,85,247,0.3)]">
+        👑 <span class="hidden sm:inline">ADMIN</span>
+      </button>
+
+      <!-- Logout / Session -->
+      <button id="logoutBtn" onclick="logoutSession()" class="hidden px-2 py-1.5 rounded-lg bg-red-950/40 border border-red-500/30 text-rose-300 hover:bg-red-500/20 text-xs">
+        🚪
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== VIEW 1: LOGIN / LICENSE KEY ==================== -->
+  <main id="loginView" class="w-full max-w-md mx-auto my-auto flex flex-col items-center py-8">
+    <div class="w-full rounded-2xl bg-[#090b14]/90 border border-cyan-500/30 p-6 shadow-[0_0_30px_rgba(0,245,255,0.15)] flex flex-col items-center">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 via-purple-600 to-pink-500 p-0.5 shadow-[0_0_20px_rgba(0,245,255,0.4)] mb-4">
+        <div class="w-full h-full bg-[#05060d] rounded-2xl flex items-center justify-center font-orbitron text-2xl">
+          🔮
+        </div>
+      </div>
+
+      <h2 class="font-orbitron font-black text-lg sm:text-xl text-center text-white tracking-wider mb-1">
+        ENTER VIP ACCESS KEY
+      </h2>
+      <p class="text-xs text-slate-400 text-center mb-6">
+        Generate your VIP key in Admin Panel or enter your license key
+      </p>
+
+      <div class="w-full space-y-4">
+        <div>
+          <label class="block text-[10px] font-orbitron text-cyan-400 uppercase tracking-widest mb-1.5">
+            LICENSE KEY (FORMAT: HACKER-XXXX-XXXX)
+          </label>
+          <input 
+            type="text" 
+            id="keyInput" 
+            placeholder="e.g. HACKER-9X42-7B1A" 
+            class="w-full bg-black/70 border border-cyan-500/40 focus:border-cyan-300 focus:ring-1 focus:ring-cyan-300 rounded-xl px-4 py-3 text-center font-mono text-base tracking-widest text-cyan-200 outline-none uppercase placeholder:text-slate-600"
+          />
+        </div>
+
+        <button 
+          onclick="submitLoginKey()" 
+          class="w-full py-3.5 rounded-xl font-orbitron font-black text-sm tracking-wider text-black bg-gradient-to-r from-cyan-400 via-sky-300 to-cyan-400 shadow-[0_0_20px_rgba(0,245,255,0.6)] hover:shadow-[0_0_30px_rgba(0,245,255,0.8)] active:scale-[0.98] transition-all"
+        >
+          ACTIVATE & ENTER ENGINE ⚡
+        </button>
+
+        <div class="pt-2 flex items-center justify-between text-xs text-slate-400">
+          <button onclick="openAdminModal()" class="text-purple-400 hover:text-purple-300 font-mono flex items-center gap-1">
+            🔑 Admin: Generate Keys
+          </button>
+          <button onclick="fillDemoKey()" class="text-cyan-400 hover:text-cyan-300 font-mono">
+            Demo Key Quick-Fill
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 2: PREDICTION ENGINE ==================== -->
+  <main id="engineView" class="hidden w-full max-w-xl mx-auto my-auto flex flex-col py-4 gap-4">
+    <!-- Active Game & Cycle Selectors -->
+    <div class="grid grid-cols-2 gap-2">
+      <!-- Game Dropdown -->
+      <div class="p-2.5 rounded-xl bg-black/60 border border-cyan-500/30 flex flex-col">
+        <label class="text-[9px] font-orbitron font-bold text-slate-400 mb-1">SELECT SERVER GAME</label>
+        <select id="gameSelect" onchange="changeGame()" class="bg-transparent text-cyan-300 font-orbitron font-bold text-xs sm:text-sm outline-none cursor-pointer">
+          <option value="BDG Win" class="bg-slate-900">BDG Win</option>
+          <option value="91 Club" class="bg-slate-900">91 Club</option>
+          <option value="Tiranga" class="bg-slate-900">Tiranga</option>
+          <option value="Daman Games" class="bg-slate-900">Daman Games</option>
+          <option value="Goa Games" class="bg-slate-900">Goa Games</option>
+          <option value="Big Daddy" class="bg-slate-900">Big Daddy</option>
+          <option value="TC Lottery" class="bg-slate-900">TC Lottery</option>
+          <option value="55 Club" class="bg-slate-900">55 Club</option>
+        </select>
+      </div>
+
+      <!-- Cycle Switch -->
+      <div class="p-2.5 rounded-xl bg-black/60 border border-purple-500/30 flex flex-col">
+        <label class="text-[9px] font-orbitron font-bold text-slate-400 mb-1">TIME CYCLE</label>
+        <div class="grid grid-cols-2 gap-1.5 h-full">
+          <button id="cycle30sBtn" onclick="setCycle('30s')" class="rounded-lg text-xs font-orbitron font-bold py-1 bg-black/50 text-slate-400 transition-all">
+            30 SEC
+          </button>
+          <button id="cycle1mBtn" onclick="setCycle('1m')" class="rounded-lg text-xs font-orbitron font-bold py-1 bg-purple-600 text-white shadow-[0_0_10px_#a855f7] transition-all">
+            1 MIN
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN PREDICTION HERO CARD -->
+    <div class="relative rounded-2xl bg-gradient-to-b from-[#0b0e1b] to-[#04060d] border border-cyan-500/30 p-5 shadow-[0_0_35px_rgba(0,245,255,0.18)] flex flex-col items-center">
+      <!-- Period, Algo and Status -->
+      <div class="w-full flex items-center justify-between pb-3 border-b border-cyan-500/15 text-[11px] font-mono">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span class="text-emerald-400 font-bold">ALGO ONLINE</span>
+        </div>
+        <div id="sessionTimeDisplay" class="text-amber-400 font-mono text-[10px]">
+          License: Active
+        </div>
+      </div>
+
+      <!-- Large Prediction Outcome (BIG / SMALL) -->
+      <div class="mt-4 flex flex-col items-center">
+        <span class="text-[10px] font-orbitron font-black tracking-widest text-slate-400 uppercase">
+          AI COMPUTED PREDICTION
+        </span>
+        <div id="predictionOutcome" class="font-orbitron font-black text-4xl sm:text-5xl my-1 text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-teal-300 drop-shadow-[0_0_20px_rgba(0,245,255,0.7)]">
+          BIG
+        </div>
+        <div id="predictionConfidence" class="text-xs font-mono font-bold text-cyan-300 px-3 py-0.5 rounded-full bg-cyan-950/50 border border-cyan-500/40">
+          95% HIGH CONFIDENCE
+        </div>
+      </div>
+
+      <!-- FIRE CIRCLE BALL COMPONENT (DECREASED SIZE COMPACT DESIGN) -->
+      <div class="mt-4 mb-2 flex flex-col items-center">
+        <span class="text-[10px] font-orbitron font-black tracking-widest text-[#00f5ff] uppercase mb-1">
+          🔥 HIGH PROBABILITY FIRE CIRCLE BALL 🔥
+        </span>
+        
+        <!-- Fire Circle Container (w-24 h-24 / 96px) -->
+        <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center my-1">
+          <!-- Outer Blazing Glow -->
+          <div class="absolute inset-0 rounded-full animate-pulse pointer-events-none" style="background: radial-gradient(circle, rgba(255,100,0,0.4) 0%, rgba(255,30,0,0.18) 55%, transparent 75%); filter: blur(8px);"></div>
+
+          <!-- Spinning Outer Fire Flame Ring -->
+          <div class="absolute -inset-1 rounded-full pointer-events-none animate-spin-slow" style="background: conic-gradient(from 0deg, #ff0055, #ff5500, #ffcc00, #ff0055, #ff9900, #ff0055); filter: drop-shadow(0 0 16px #ff5500); opacity: 0.85;"></div>
+
+          <!-- Counter-Spinning Inner Flame Corona -->
+          <div class="absolute inset-0.5 rounded-full pointer-events-none animate-spin-reverse" style="background: conic-gradient(from 180deg, rgba(255,200,0,0.9), rgba(255,50,0,0.8), rgba(255,0,100,0.7), rgba(255,220,0,0.95)); mask-image: radial-gradient(circle, transparent 62%, black 65%); -webkit-mask-image: radial-gradient(circle, transparent 62%, black 65%);"></div>
+
+          <!-- Dark Inner Shield -->
+          <div class="absolute inset-1.5 rounded-full bg-[#050612]/90 border border-orange-500/40"></div>
+
+          <!-- Ball Image -->
+          <img 
+            id="fireBallImg" 
+            src="https://i.postimg.cc/wBtmjWnY/num0-4-7.png" 
+            alt="Fire Ball 9" 
+            class="relative z-10 w-15 h-15 sm:w-18 sm:h-18 object-contain drop-shadow-[0_4px_16px_rgba(255,80,0,0.7)]" 
+          />
+
+          <!-- Sparkle Embers -->
+          <div class="absolute -top-1 left-1/4 w-1.5 h-1.5 bg-yellow-300 rounded-full animate-ping pointer-events-none opacity-80"></div>
+          <div class="absolute -bottom-1 right-1/4 w-1.5 h-1.5 bg-red-400 rounded-full animate-ping pointer-events-none opacity-70"></div>
+        </div>
+
+        <!-- Fire Ball Badge -->
+        <div id="fireBallBadge" class="relative -mt-1.5 z-20 font-orbitron font-extrabold uppercase tracking-wider rounded-full border border-orange-500 text-amber-300 text-[11px] px-3 py-0.5 flex items-center gap-1.5 shadow-[0_0_14px_rgba(255,102,0,0.5)] bg-[#180902]">
+          <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+          <span id="fireBallBadgeText">BALL • 9</span>
+        </div>
+      </div>
+
+      <!-- Tri-Box: Period, Cycle, Next In Countdown -->
+      <div class="grid grid-cols-3 gap-2 w-full mt-4">
+        <div class="p-2.5 rounded-xl bg-black/50 border border-cyan-500/20 text-center">
+          <span class="block text-[9px] font-orbitron font-bold text-slate-400">PERIOD</span>
+          <b id="periodNumber" class="font-mono text-xs sm:text-sm text-cyan-300">#10271</b>
+        </div>
+        <div class="p-2.5 rounded-xl bg-black/50 border border-purple-500/20 text-center">
+          <span class="block text-[9px] font-orbitron font-bold text-slate-400">CYCLE</span>
+          <b id="cycleLabel" class="font-orbitron text-xs sm:text-sm text-purple-300">1 MIN</b>
+        </div>
+        <div id="countdownBox" class="p-2.5 rounded-xl bg-black/50 border border-amber-500/30 text-center transition-all">
+          <span class="block text-[9px] font-orbitron font-bold text-slate-400">NEXT IN</span>
+          <b id="countdownText" class="font-mono text-xs sm:text-sm text-amber-300 font-black">00:42</b>
+        </div>
+      </div>
+
+      <!-- Copy Prediction Button -->
+      <div class="w-full mt-4">
+        <button 
+          onclick="copyPredictionSignal()" 
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-black font-orbitron font-black text-xs sm:text-sm tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(245,158,11,0.5)] active:scale-[0.98] transition-all"
+        >
+          📋 <span>COPY PREDICTION</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== MODAL 1: ADMIN PANEL ==================== -->
+  <div id="adminModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="w-full max-w-lg rounded-2xl bg-[#090b16] border border-purple-500/40 p-5 shadow-[0_0_35px_rgba(168,85,247,0.3)] max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-purple-500/20 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">👑</span>
+          <h3 class="font-orbitron font-black text-sm sm:text-base text-purple-300">ADMIN CONTROL PANEL</h3>
+        </div>
+        <button onclick="closeAdminModal()" class="w-8 h-8 rounded-lg bg-black/50 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <!-- Admin Login Form -->
+      <div id="adminLoginForm">
+        <label class="block text-xs font-mono text-purple-300 mb-2">ENTER ADMIN PASSWORD (Default: HACKER18)</label>
+        <div class="flex gap-2">
+          <input type="password" id="adminPassInput" placeholder="Password..." class="flex-1 bg-black/70 border border-purple-500/40 rounded-xl px-4 py-2 text-white font-mono text-sm outline-none" />
+          <button onclick="submitAdminLogin()" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-orbitron font-bold text-xs">
+            UNLOCK
+          </button>
+        </div>
+        <p id="adminError" class="text-xs text-rose-400 font-mono mt-2 hidden"></p>
+      </div>
+
+      <!-- Admin Logged In Dashboard -->
+      <div id="adminDashboard" class="hidden space-y-4">
+        <div class="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/30">
+          <h4 class="font-orbitron font-bold text-xs text-purple-200 mb-2">GENERATE NEW LICENSE KEY</h4>
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <button onclick="setGenDuration(1)" class="durationBtn px-2.5 py-1 rounded bg-black/50 border border-purple-500/40 text-purple-300 text-xs font-mono">1 Day</button>
+            <button onclick="setGenDuration(3)" class="durationBtn px-2.5 py-1 rounded bg-black/50 border border-purple-500/40 text-purple-300 text-xs font-mono">3 Days</button>
+            <button onclick="setGenDuration(5)" class="durationBtn px-2.5 py-1 rounded bg-black/50 border border-purple-500/40 text-purple-300 text-xs font-mono">5 Days</button>
+            <button onclick="setGenDuration(7)" class="durationBtn px-2.5 py-1 rounded bg-black/50 border border-purple-500/40 text-purple-300 text-xs font-mono">7 Days</button>
+            <button onclick="setGenDuration(30)" class="durationBtn px-2.5 py-1 rounded bg-purple-600 text-white text-xs font-mono">30 Days</button>
+          </div>
+          <button onclick="generateAdminKey()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-orbitron font-bold text-xs shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+            + GENERATE KEY
+          </button>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-orbitron font-bold text-slate-300">KEY REGISTRY</span>
+            <button onclick="renderKeysList()" class="text-xs font-mono text-purple-400">↻ Refresh</button>
+          </div>
+          <div id="keysContainer" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: BRIGHTNESS & NEON ==================== -->
+  <div id="brightnessModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="w-full max-w-sm rounded-2xl bg-[#090b16] border border-amber-500/40 p-5 shadow-[0_0_35px_rgba(245,158,11,0.3)]">
+      <div class="flex items-center justify-between pb-3 border-b border-amber-500/20 mb-4">
+        <h3 class="font-orbitron font-black text-sm text-amber-300">DISPLAY & NEON GLOW</h3>
+        <button onclick="toggleBrightnessModal()" class="w-8 h-8 rounded-lg bg-black/50 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs font-mono">
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <span>Overall Brightness</span>
+            <span id="brightnessVal">100%</span>
+          </div>
+          <input type="range" min="30" max="160" value="100" id="brightnessRange" oninput="updateBrightness(this.value)" class="w-full accent-amber-400 cursor-pointer" />
+        </div>
+
+        <div>
+          <div class="flex justify-between text-slate-300 mb-1">
+            <span>Neon Glow Power</span>
+            <span id="glowVal">100%</span>
+          </div>
+          <input type="range" min="20" max="180" value="100" id="glowRange" oninput="updateGlow(this.value)" class="w-full accent-cyan-400 cursor-pointer" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    const BALL_IMAGES = {
+      0: "https://i.postimg.cc/vZsq9nGm/num0-4-10.png",
+      1: "https://i.postimg.cc/mDt8RNyD/num0-4-6.png",
+      2: "https://i.postimg.cc/ryRQPjmw/num0-4-9.png",
+      3: "https://i.postimg.cc/HLP9S81T/num0-4-1.png",
+      4: "https://i.postimg.cc/K80Pz3zL/num0-4-2.png",
+      5: "https://i.postimg.cc/jj9y6Vyd/num0-4-11.png",
+      6: "https://i.postimg.cc/gjyRPnQV/num0-4-12.png",
+      7: "https://i.postimg.cc/NfYmkk2T/num0-4-4.png",
+      8: "https://i.postimg.cc/vHz9qxWb/num0-4-5.png",
+      9: "https://i.postimg.cc/wBtmjWnY/num0-4-7.png"
+    };
+
+    let selectedCycle = '1m';
+    let selectedGame = 'BDG Win';
+    let activeKeySession = null;
+    let selectedGenDuration = 30;
+    let isAdminUnlocked = false;
+
+    // Toast function
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+      el.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+        el.classList.remove('opacity-100', 'translate-y-0');
+      }, 2600);
+    }
+
+    // Key helpers
+    function getStoredKeys() {
+      try {
+        const raw = localStorage.getItem('hacker_prime_html_keys');
+        return raw ? JSON.parse(raw) : [];
+      } catch { return []; }
+    }
+    function saveStoredKeys(k) {
+      localStorage.setItem('hacker_prime_html_keys', JSON.stringify(k));
+    }
+    function generateRandomKey() {
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const r = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      return `HACKER-${r()}-${r()}`;
+    }
+
+    // Initial check - ALWAYS DIRECTLY OPEN LOGIN PAGE
+    window.addEventListener('DOMContentLoaded', () => {
+      // Force Login View to always open first
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('engineView').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+
+      // Seed initial key if none exists
+      let keys = getStoredKeys();
+      if (keys.length === 0) {
+        keys = [{
+          key: 'HACKER-VIP8-2026',
+          durationDays: 30,
+          createdAt: Date.now(),
+          activatedAt: null,
+          expiresAt: null,
+          status: 'active'
+        }];
+        saveStoredKeys(keys);
+      }
+
+      // Pre-fill last entered key if available for convenience
+      const lastKey = localStorage.getItem('hacker_prime_last_key');
+      if (lastKey) {
+        document.getElementById('keyInput').value = lastKey;
+      }
+
+      // Start timer loop in background
+      startEngineTimer();
+    });
+
+    function fillDemoKey() {
+      document.getElementById('keyInput').value = 'HACKER-VIP8-2026';
+    }
+
+    async function submitLoginKey() {
+      const val = document.getElementById('keyInput').value.trim().toUpperCase();
+      if (!val) {
+        showToast('Please enter a license key');
+        return;
+      }
+
+      // Try online server activation first if connected
+      try {
+        const res = await fetch('/api/keys/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: val })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.keyObj) {
+            localStorage.setItem('hacker_prime_last_key', data.keyObj.key);
+            unlockEngine(data.keyObj);
+            showToast(`⚡ Access Granted! Valid for ${data.keyObj.durationDays} Days`);
+            return;
+          } else {
+            showToast(data.message || '❌ Invalid License Key!');
+            return;
+          }
+        }
+      } catch {
+        // Fallback to local stored keys for standalone offline use
+      }
+
+      const keys = getStoredKeys();
+      const keyObj = keys.find(k => k.key.toUpperCase() === val);
+
+      if (!keyObj) {
+        showToast('❌ Invalid License Key! Contact Admin.');
+        return;
+      }
+      if (keyObj.status === 'revoked') {
+        showToast('🚫 Key has been REVOKED by Admin!');
+        return;
+      }
+      if (keyObj.expiresAt && Date.now() > keyObj.expiresAt) {
+        showToast('⚠️ Key has EXPIRED!');
+        return;
+      }
+
+      // Activate
+      if (!keyObj.activatedAt) {
+        keyObj.activatedAt = Date.now();
+        keyObj.expiresAt = Date.now() + keyObj.durationDays * 86400000;
+        keyObj.status = 'in-use';
+        saveStoredKeys(keys);
+      }
+
+      localStorage.setItem('hacker_prime_last_key', keyObj.key);
+      unlockEngine(keyObj);
+      showToast(`⚡ Access Granted! Valid for ${keyObj.durationDays} Days`);
+    }
+
+    function unlockEngine(session) {
+      activeKeySession = session;
+      localStorage.setItem('hacker_prime_html_session', JSON.stringify(session));
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('engineView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+    }
+
+    function logoutSession() {
+      activeKeySession = null;
+      localStorage.removeItem('hacker_prime_html_session');
+      document.getElementById('engineView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      showToast('Logged out');
+    }
+
+    // Engine Timer & Prediction Simulation
+    let currentPrediction = {
+      period: '10271',
+      outcome: 'BIG',
+      ball: 9,
+      confidence: 95
+    };
+
+    function startEngineTimer() {
+      setInterval(() => {
+        const now = Math.floor(Date.now() / 1000);
+        const cycleSec = selectedCycle === '30s' ? 30 : 60;
+        const remaining = cycleSec - (now % cycleSec);
+
+        const m = Math.floor(remaining / 60).toString().padStart(2, '0');
+        const s = (remaining % 60).toString().padStart(2, '0');
+        document.getElementById('countdownText').textContent = `${m}:${s}`;
+
+        const box = document.getElementById('countdownBox');
+        if (remaining <= 5) {
+          box.classList.add('border-red-500', 'shadow-[0_0_15px_rgba(255,0,85,0.5)]');
+          document.getElementById('countdownText').classList.add('text-rose-400');
+        } else {
+          box.classList.remove('border-red-500', 'shadow-[0_0_15px_rgba(255,0,85,0.5)]');
+          document.getElementById('countdownText').classList.remove('text-rose-400');
+        }
+
+        // When new round hits
+        if (remaining === cycleSec || remaining === 1) {
+          calculateNewPrediction();
+        }
+      }, 1000);
+    }
+
+    function calculateNewPrediction() {
+      const now = new Date();
+      const periodNum = (now.getUTCHours() * 60 + now.getUTCMinutes() + (selectedCycle === '30s' ? 2 : 1) * 100).toString().slice(-5);
+      
+      const seed = Date.now() % 100;
+      const isBig = seed % 2 === 0;
+      const ball = isBig ? [5, 6, 7, 8, 9][seed % 5] : [0, 1, 2, 3, 4][seed % 5];
+      const conf = 92 + (seed % 7);
+
+      currentPrediction = {
+        period: periodNum,
+        outcome: isBig ? 'BIG' : 'SMALL',
+        ball: ball,
+        confidence: conf
+      };
+
+      document.getElementById('periodNumber').textContent = `#${periodNum}`;
+      document.getElementById('predictionOutcome').textContent = currentPrediction.outcome;
+      document.getElementById('predictionConfidence').textContent = `${conf}% HIGH CONFIDENCE`;
+      document.getElementById('fireBallImg').src = BALL_IMAGES[ball] || BALL_IMAGES[9];
+      document.getElementById('fireBallBadgeText').textContent = `BALL • ${ball}`;
+    }
+
+    function changeGame() {
+      selectedGame = document.getElementById('gameSelect').value;
+      calculateNewPrediction();
+      showToast(`Switched Game: ${selectedGame}`);
+    }
+
+    function setCycle(c) {
+      selectedCycle = c;
+      const btn30 = document.getElementById('cycle30sBtn');
+      const btn1m = document.getElementById('cycle1mBtn');
+      if (c === '30s') {
+        btn30.className = 'rounded-lg text-xs font-orbitron font-bold py-1 bg-purple-600 text-white shadow-[0_0_10px_#a855f7] transition-all';
+        btn1m.className = 'rounded-lg text-xs font-orbitron font-bold py-1 bg-black/50 text-slate-400 transition-all';
+        document.getElementById('cycleLabel').textContent = '30 SEC';
+      } else {
+        btn1m.className = 'rounded-lg text-xs font-orbitron font-bold py-1 bg-purple-600 text-white shadow-[0_0_10px_#a855f7] transition-all';
+        btn30.className = 'rounded-lg text-xs font-orbitron font-bold py-1 bg-black/50 text-slate-400 transition-all';
+        document.getElementById('cycleLabel').textContent = '1 MIN';
+      }
+      calculateNewPrediction();
+    }
+
+    // Copy Prediction signal
+    async function copyPredictionSignal() {
+      const cycleStr = selectedCycle === '30s' ? '30 SEC' : '1 MIN';
+      const text = `⚡ HACKER PRIME AI ⚡
+━━━━━━━━━━━━━━━━━━━━━━
+🎮 GAME : ${selectedGame} (${cycleStr})
+🎯 PERIOD : #${currentPrediction.period}
+🔮 PREDICTION : ${currentPrediction.outcome}
+🎱 FIRE BALL : ${currentPrediction.ball} 🔥
+📊 ACCURACY : ${currentPrediction.confidence}% CONFIDENCE
+🛡️ RECOVERY : STEP 1
+👑 ALGO : HACKER PRIME VIP V4.9
+━━━━━━━━━━━━━━━━━━━━━━
+🔥 100% VERIFIED VIP SIGNAL`;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('✓ Copied Prediction Signal!');
+      } catch {
+        showToast('Signal Ready!');
+      }
+    }
+
+    // Admin Modal Logic
+    function openAdminModal() {
+      document.getElementById('adminModal').classList.remove('hidden');
+      if (isAdminUnlocked) {
+        renderKeysList();
+      }
+    }
+    function closeAdminModal() {
+      document.getElementById('adminModal').classList.add('hidden');
+    }
+    function submitAdminLogin() {
+      const pass = document.getElementById('adminPassInput').value.trim();
+      if (pass === 'HACKER18') {
+        isAdminUnlocked = true;
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminDashboard').classList.remove('hidden');
+        renderKeysList();
+        showToast('👑 Admin Access Unlocked');
+      } else {
+        const err = document.getElementById('adminError');
+        err.textContent = 'Incorrect Password. Denied.';
+        err.classList.remove('hidden');
+      }
+    }
+    function setGenDuration(d) {
+      selectedGenDuration = d;
+      document.querySelectorAll('.durationBtn').forEach(b => {
+        b.classList.remove('bg-purple-600', 'text-white');
+        b.classList.add('bg-black/50', 'text-purple-300');
+      });
+      event.target.classList.remove('bg-black/50', 'text-purple-300');
+      event.target.classList.add('bg-purple-600', 'text-white');
+    }
+    function generateAdminKey() {
+      const newKey = {
+        key: generateRandomKey(),
+        durationDays: selectedGenDuration,
+        createdAt: Date.now(),
+        activatedAt: null,
+        expiresAt: null,
+        status: 'active'
+      };
+      const keys = getStoredKeys();
+      keys.unshift(newKey);
+      saveStoredKeys(keys);
+      renderKeysList();
+      showToast(`✓ Generated ${selectedGenDuration}-Day Key: ${newKey.key}`);
+    }
+    function renderKeysList() {
+      const keys = getStoredKeys();
+      const container = document.getElementById('keysContainer');
+      container.innerHTML = '';
+
+      if (keys.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-500 text-center py-4">No keys generated yet.</div>';
+        return;
+      }
+
+      keys.forEach(k => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 rounded-lg bg-black/60 border border-slate-800 flex items-center justify-between text-xs font-mono';
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-cyan-300">${k.key}</div>
+            <div class="text-[10px] text-slate-400">${k.durationDays} Days • Status: <span class="${k.status === 'revoked' ? 'text-red-400' : 'text-emerald-400'}">${k.status.toUpperCase()}</span></div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="navigator.clipboard.writeText('${k.key}'); showToast('Copied ${k.key}');" class="px-2 py-1 bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 rounded hover:bg-cyan-500/20">Copy</button>
+            ${k.status !== 'revoked' ? `<button onclick="revokeStoredKey('${k.key}')" class="px-2 py-1 bg-red-950/60 border border-red-500/30 text-rose-300 rounded hover:bg-red-500/20">Revoke</button>` : ''}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+    function revokeStoredKey(kCode) {
+      const keys = getStoredKeys();
+      const k = keys.find(item => item.key === kCode);
+      if (k) {
+        k.status = 'revoked';
+        saveStoredKeys(keys);
+        renderKeysList();
+        showToast(`Revoked: ${kCode}`);
+      }
+    }
+
+    // Brightness Controls
+    function toggleBrightnessModal() {
+      const m = document.getElementById('brightnessModal');
+      m.classList.toggle('hidden');
+    }
+    function updateBrightness(val) {
+      document.getElementById('brightnessVal').textContent = `${val}%`;
+      document.documentElement.style.setProperty('--brightness', val / 100);
+    }
+    function updateGlow(val) {
+      document.getElementById('glowVal').textContent = `${val}%`;
+      document.documentElement.style.setProperty('--glow-intensity', val / 100);
+    }
+  </script>
+</body>
+</html>

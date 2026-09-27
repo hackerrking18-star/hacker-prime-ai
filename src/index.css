@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg0: #02030a;
+    --bg1: #050817;
+    --gold: #00f5ff;
+    --gold2: #7c3aed;
+    --violet: #b026ff;
+    --cyan: #00f5ff;
+    --green: #00ff9d;
+    --red: #ff0055;
+    --stroke: rgba(0, 245, 255, 0.22);
+    --stroke-gold: rgba(0, 245, 255, 0.55);
+    --shadow-gold: 0 0 28px rgba(0, 245, 255, 0.3), 0 0 70px rgba(176, 38, 255, 0.15);
+    --app-brightness: 1;
+    --neon-intensity: 1;
+  }
+
+  [data-theme="royal-gold"] {
+    --gold: #fbbf24;
+    --gold2: #f59e0b;
+    --stroke-gold: rgba(251, 191, 36, 0.55);
+    --shadow-gold: 0 0 28px rgba(251, 191, 36, 0.35);
+  }
+
+  [data-theme="emerald-vip"] {
+    --gold: #00ff9d;
+    --gold2: #10e07f;
+    --stroke-gold: rgba(0, 255, 157, 0.55);
+    --shadow-gold: 0 0 28px rgba(0, 255, 157, 0.35);
+  }
+
+  [data-theme="crimson-vip"] {
+    --gold: #ff4d6d;
+    --gold2: #ff0055;
+    --stroke-gold: rgba(255, 77, 109, 0.55);
+    --shadow-gold: 0 0 28px rgba(255, 77, 109, 0.35);
+  }
+
+  [data-theme="ocean-diamond"] {
+    --gold: #22d3ee;
+    --gold2: #38bdf8;
+    --stroke-gold: rgba(34, 211, 238, 0.55);
+    --shadow-gold: 0 0 28px rgba(34, 211, 238, 0.35);
+  }
+
+  [data-theme="violet-crown"] {
+    --gold: #c084fc;
+    --gold2: #a855f7;
+    --stroke-gold: rgba(192, 132, 252, 0.55);
+    --shadow-gold: 0 0 28px rgba(192, 132, 252, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  user-select: none;
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', monospace, sans-serif !important;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Master Brightness Wrapper Filter */
+#app-brightness-shell {
+  filter: brightness(var(--app-brightness, 1));
+  transition: filter 0.2s ease-out;
+}
+
+/* Animations */
+@keyframes ballFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.04);
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(600%);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(5, 8, 22, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 255, 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.7);
+}
